@@ -18,75 +18,37 @@ Build a Gradio interface that takes user input, passes it to the NER model via t
 
 ### PROGRAM:
 ```
-import os
-import io
-from IPython.display import Image, display, HTML
-from PIL import Image
-import base64 
-from dotenv import load_dotenv, find_dotenv
-import requests
-import json
+from transformers import AutoTokenizer, AutoModelForTokenClassification
+from transformers import pipeline
 import gradio as gr
 
-# Load environment variables
-_ = load_dotenv(find_dotenv())  # Read local .env file
-hf_api_key = os.environ['HF_API_KEY']
-API_URL = os.environ['HF_API_SUMMARY_BASE']  # Ensure the API URL is correct
+# Load pre-trained BERT NER model and tokenizer
+model_name = "dbmdz/bert-large-cased-finetuned-conll03-english"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForTokenClassification.from_pretrained(model_name)
 
-# Helper function to send API requests
-def get_completion(inputs, parameters=None, ENDPOINT_URL=API_URL): 
-    headers = {
-        "Authorization": f"Bearer {hf_api_key}",
-        "Content-Type": "application/json"
-    }
-    data = {"inputs": inputs}
-    if parameters is not None:
-        data.update({"parameters": parameters})
-    response = requests.post(ENDPOINT_URL, headers=headers, data=json.dumps(data))
-    return json.loads(response.content.decode("utf-8"))
+# Create a pipeline for NER
+ner_pipeline = pipeline("ner", model=model, tokenizer=tokenizer)
 
-# Function to merge subword tokens (e.g., "San" and "Francisco" into "San Francisco")
-def merge_tokens(tokens):
-    merged_tokens = []
-    for token in tokens:
-        if merged_tokens and token['entity'].startswith('I-') and merged_tokens[-1]['entity'].endswith(token['entity'][2:]):
-            # Merge the token if it's part of the same entity
-            last_token = merged_tokens[-1]
-            last_token['word'] += token['word'].replace('##', '')
-            last_token['end'] = token['end']
-            last_token['score'] = (last_token['score'] + token['score']) / 2
-        else:
-            # Add new token to the list
-            merged_tokens.append(token)
-    return merged_tokens
+# Function to process user input
+def ner_function(text):
+    entities = ner_pipeline(text)
+    return "\n".join([f"{ent['word']} ({ent['entity']})" for ent in entities])
 
-# NER function to process input and call the API
-def ner(input):
-    output = get_completion(input, parameters=None, ENDPOINT_URL=API_URL)
-    merged_tokens = merge_tokens(output)
-    return {"text": input, "entities": merged_tokens}
-
-# Initialize Gradio interface
-gr.close_all()
-demo = gr.Interface(
-    fn=ner,
-    inputs=[gr.Textbox(label="Text to find entities", lines=2)],
-    outputs=[gr.HighlightedText(label="Text with entities")],
-    title="NER with dslim/bert-base-NER",
-    description="Find entities using the `dslim/bert-base-NER` model under the hood!",
-    allow_flagging="never",
-    examples=[
-        "My name is Andrew, I'm building DeeplearningAI and I live in California",
-        "My name is Poli, I live in Vienna and work at HuggingFace"
-    ]
+# Gradio Interface
+iface = gr.Interface(
+    fn=ner_function,
+    inputs=gr.Textbox(lines=5, label="Input Text"),
+    outputs=gr.Textbox(lines=10, label="Named Entities"),
+    title="NER Demo with Pre-trained Model"
 )
 
-# Launch the Gradio interface
-demo.launch()
+iface.launch()
 ```
 ### OUTPUT:
 
-![image](https://github.com/user-attachments/assets/96b91706-2c9f-46fe-8569-a318356b6dca)
+![image](https://github.com/user-attachments/assets/2936faa4-73ac-4e22-b91f-0886cf39c981)
+
 
 ### RESULT:
 Thus, developed an NER prototype application with user interaction and evaluation features, using a fine-tuned BART model deployed through the Gradio framework.
