@@ -47,7 +47,7 @@ iface.launch()
 ```
 ### OUTPUT:
 
-![image](https://github.com/user-attachments/assets/2936faa4-73ac-4e22-b91f-0886cf39c981)
+![image](https://github.com/user-attachments/assets/caeac121-003d-44f5-9a75-72d39333ec79)
 
 
 ### RESULT:
